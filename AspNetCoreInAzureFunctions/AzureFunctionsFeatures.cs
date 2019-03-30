@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AspNetCoreInAzureFunctions.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Azure.WebJobs;
 
 namespace AspNetCoreInAzureFunctions
 {
@@ -17,17 +18,20 @@ namespace AspNetCoreInAzureFunctions
     /// </summary>
     [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "HttpResponseMessage will be disposed by the functions runtime.")]
     [SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Collection suffix conflict with standard ASP.Net core naming conventions.")]
-    public sealed class AzureFunctionsFeatures : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpResponseMessageFeature
+    public sealed class AzureFunctionsFeatures
+        : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpResponseMessageFeature, IAzureFunctionExecutionContext
     {
         private readonly IDictionary<Type, object> _features = new Dictionary<Type, object>();
         private readonly HttpRequest _request;
+        private readonly ExecutionContext _executionContext;
         private readonly HttpResponseMessage _responseMessage;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AzureFunctionsFeatures"/> class using <paramref name="request"/>.
         /// </summary>
         /// <param name="request">The incoming <see cref="HttpRequest"/></param>
-        public AzureFunctionsFeatures(HttpRequest request)
+        /// <param name="executionContext">The Azure Function <see cref="ExecutionContext"/></param>
+        public AzureFunctionsFeatures(HttpRequest request, ExecutionContext executionContext = null)
         {
             _request = request ?? throw new ArgumentNullException(nameof(request));
             _responseMessage = new HttpResponseMessage();
@@ -35,6 +39,11 @@ namespace AspNetCoreInAzureFunctions
             _features[typeof(IHttpRequestFeature)] = this;
             _features[typeof(IHttpResponseFeature)] = this;
             _features[typeof(IHttpResponseMessageFeature)] = this;
+            if (executionContext != null)
+            {
+                _executionContext = executionContext;
+                _features[typeof(IAzureFunctionExecutionContext)] = this;
+            }
         }
 
         /// <inheritdoc />
@@ -95,6 +104,9 @@ namespace AspNetCoreInAzureFunctions
 
         /// <inheritdoc />
         public bool HasStarted { get; private set; }
+
+        /// <inheritdoc />
+        ExecutionContext IAzureFunctionExecutionContext.ExecutionContext { get => _executionContext; }
 
         /// <inheritdoc />
         object IFeatureCollection.this[Type key]

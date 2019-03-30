@@ -12,7 +12,8 @@ namespace AspNetCoreInAzureFunctions.Sample
 
         [FunctionName("ApiFunction")]
         public static Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest request)
-            => Server.ProcessRequestAsync(request);
+            [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest request,
+            ExecutionContext executionContext)
+            => Server.ProcessRequestAsync(request, executionContext);
     }
 }

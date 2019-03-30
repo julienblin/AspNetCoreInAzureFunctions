@@ -21,24 +21,40 @@ namespace AspNetCoreInAzureFunctions
     public sealed class AzureFunctionsServer : IServer
     {
         /// <summary>
-        /// Gets or sets the <see cref="IHttpApplication{TContext}" /> that processes the requests.
+        /// Initializes a new instance of the <see cref="AzureFunctionsServer"/> class.
         /// </summary>
-        public IHttpApplication<HostingApplication.Context> Application { get; set; }
+        /// <param name="serviceProvider">The <see cref="IServiceProvider"/> injected via DI.</param>
+        public AzureFunctionsServer(IServiceProvider serviceProvider)
+        {
+            ServiceProvider = serviceProvider;
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IHttpApplication{TContext}" /> that processes the requests.
+        /// </summary>
+        public IHttpApplication<HostingApplication.Context> Application { get; private set; }
+
+        /// <summary>
+        /// Gets the root <see cref="IServiceProvider"/>.
+        /// </summary>
+        public IServiceProvider ServiceProvider { get; }
 
         /// <inheritdoc />
         IFeatureCollection IServer.Features { get; } = new FeatureCollection();
 
         /// <summary>
         /// Configure and start the ASP.Net Core <see cref="IWebHost"/>
-        /// and returns the ready to run <see cref="AzureFunctionsServer"/>.
+        /// and returns a ready to run <see cref="AzureFunctionsServer"/>.
         /// </summary>
         /// <typeparam name="TStartup">The ASP.Net Core Startup class to use.</typeparam>
         /// <param name="webHostBuilder">
         /// Allow the customization of the <see cref="IWebHostBuilder"/> / <see cref="IWebHost"/>.
         /// If not provided, the defaults are:
-        ///   - Use current directory as content root
-        ///   - Use only environment variables as configuration source
-        ///   - Configure logging with Console logger using Logging configuration section.
+        /// <list type="bullet">
+        ///     <item>Use current directory as content root</item>
+        ///     <item>Use only environment variables as configuration source</item>
+        ///     <item>Configure logging with Console logger using Logging configuration section.</item>
+        /// </list>
         /// </param>
         /// <returns>Ready-to-run <see cref="AzureFunctionsServer"/>.</returns>
         public static AzureFunctionsServer UseStartup<TStartup>(Action<IWebHostBuilder> webHostBuilder = null)
@@ -70,6 +86,7 @@ namespace AspNetCoreInAzureFunctions
                 .Build();
 
             host.Start();
+
             return host.Services.GetRequiredService<IServer>() as AzureFunctionsServer;
         }
 
@@ -79,8 +96,9 @@ namespace AspNetCoreInAzureFunctions
         /// and produces a <see cref="HttpResponseMessage"/> suitable for Azure Function response.
         /// </summary>
         /// <param name="request">The incoming <see cref="HttpRequest"/>.</param>
+        /// <param name="executionContext">The Azure Function <see cref="Microsoft.Azure.WebJobs.ExecutionContext"/></param>
         /// <returns>The final <see cref="HttpResponseMessage"/>.</returns>
-        public async Task<HttpResponseMessage> ProcessRequestAsync(HttpRequest request)
+        public async Task<HttpResponseMessage> ProcessRequestAsync(HttpRequest request, Microsoft.Azure.WebJobs.ExecutionContext executionContext = null)
         {
             if (request == null)
             {
@@ -92,7 +110,7 @@ namespace AspNetCoreInAzureFunctions
                 throw new Exception($"The {nameof(Application)} hasn't been initialized. Make sure that the host has started prior to calling {nameof(ProcessRequestAsync)}");
             }
 
-            var features = new AzureFunctionsFeatures(request);
+            var features = new AzureFunctionsFeatures(request, executionContext);
             var context = Application.CreateContext(features);
 
             try
@@ -105,10 +123,41 @@ namespace AspNetCoreInAzureFunctions
                 throw;
             }
 
+            var responseMessage = context.HttpContext.Features.Get<IHttpResponseMessageFeature>()
+                .GetHttpResponseMessage();
+
             Application.DisposeContext(context, null);
 
-            return context.HttpContext.Features.Get<IHttpResponseMessageFeature>()
-                .GetHttpResponseMessage();
+            return responseMessage;
+        }
+
+        /// <summary>
+        /// Executes <paramref name="execution"/> in a scoped <see cref="IServiceProvider"/>.
+        /// To be used by other Azure Functions in the Function App that are not triggered by HTTP.
+        /// </summary>
+        /// <param name="execution">The function to execute.</param>
+        /// <returns>The <see cref="Task"/>.</returns>
+        public async Task ExecuteInScope(Func<IServiceProvider, Task> execution)
+        {
+            using (var scope = ServiceProvider.CreateScope())
+            {
+                await execution(scope.ServiceProvider);
+            }
+        }
+
+        /// <summary>
+        /// Executes <paramref name="execution"/> in a scoped <see cref="IServiceProvider"/>.
+        /// To be used by other Azure Functions in the Function App that are not triggered by HTTP.
+        /// </summary>
+        /// <typeparam name="T">The return type</typeparam>
+        /// <param name="execution">The function to execute.</param>
+        /// <returns>The <see cref="Task"/>.</returns>
+        public async Task<T> ExecuteInScope<T>(Func<IServiceProvider, Task<T>> execution)
+        {
+            using (var scope = ServiceProvider.CreateScope())
+            {
+                return await execution(scope.ServiceProvider);
+            }
         }
 
         /// <inheritdoc />

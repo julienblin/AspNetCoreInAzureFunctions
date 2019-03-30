@@ -163,7 +163,6 @@ namespace AspNetCoreInAzureFunctions
                 var contentLength = httpResponseFeature.Body.Length;
                 httpResponseFeature.Body.Seek(0, SeekOrigin.Begin);
                 _responseMessage.Content = new StreamContent(httpResponseFeature.Body);
-                _responseMessage.Content.Headers.ContentLength = contentLength;
             }
 
             foreach (var header in httpResponseFeature.Headers)

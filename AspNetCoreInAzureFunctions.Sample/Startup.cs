@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace AspNetCoreInAzureFunctions.Sample
 {
@@ -28,11 +29,25 @@ namespace AspNetCoreInAzureFunctions.Sample
                     options.SerializerSettings.Converters.Add(new StringEnumConverter { CamelCaseText = true });
                     options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                 });
+
+        services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc(
+                    "v1",
+                    new Info { Title = $"Sample Azure Function", Version = typeof(Startup).Assembly.GetName().Version.ToString() });
+                options.EnableAnnotations();
+            });
         }
 
         public void Configure(IApplicationBuilder app)
         {
             app.UseMvc();
+
+            app.UseSwagger()
+               .UseSwaggerUI(options =>
+               {
+                   options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+               });
         }
     }
 }

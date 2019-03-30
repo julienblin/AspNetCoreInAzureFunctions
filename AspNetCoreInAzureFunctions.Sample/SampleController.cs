@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace AspNetCoreInAzureFunctions.Sample
 {
@@ -6,13 +7,15 @@ namespace AspNetCoreInAzureFunctions.Sample
     public class SampleController : ControllerBase
     {
         [HttpGet("")]
+        [SwaggerOperation(Summary = "Simple index response")]
         public IActionResult Index()
         {
             return Ok(new { Message = "Index" });
         }
 
-        [HttpGet("info")]
-        public IActionResult GetInfo([FromQuery] string name = null)
+        [HttpGet("hello")]
+        [SwaggerOperation(Summary = "Hello world!")]
+        public IActionResult Hello([FromQuery] string name = null)
         {
             return Ok(new { Info = $"Hello, {name ?? "world"}" });
         }

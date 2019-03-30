@@ -3,9 +3,9 @@
 namespace AspNetCoreInAzureFunctions.Features
 {
     /// <summary>
-    /// ASP.NET Core features that allows the retrieval of the Azure Function as <see cref="ExecutionContext"/>
+    /// ASP.NET Core features that allows the retrieval of the Azure Function <see cref="ExecutionContext"/>
     /// </summary>
-    public interface IAzureFunctionExecutionContext
+    public interface IAzureFunctionExecutionContextFeature
     {
         /// <summary>
         /// Gets the Azure Function <see cref="ExecutionContext"/>.

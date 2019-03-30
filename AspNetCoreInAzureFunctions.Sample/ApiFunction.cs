@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 
 namespace AspNetCoreInAzureFunctions.Sample
 {
@@ -13,7 +14,8 @@ namespace AspNetCoreInAzureFunctions.Sample
         [FunctionName("ApiFunction")]
         public static Task<HttpResponseMessage> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest request,
-            ExecutionContext executionContext)
-            => Server.ProcessRequestAsync(request, executionContext);
+            ExecutionContext executionContext,
+            ILogger logger)
+            => Server.ProcessRequestAsync(request, executionContext, logger);
     }
 }

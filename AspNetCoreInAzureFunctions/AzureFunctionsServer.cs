@@ -53,7 +53,7 @@ namespace AspNetCoreInAzureFunctions
         /// <list type="bullet">
         ///     <item>Use current directory as content root</item>
         ///     <item>Use only environment variables as configuration source</item>
-        ///     <item>Configure logging with Console logger using Logging configuration section.</item>
+        ///     <item>Configure logging with Azure Function logger using Logging configuration section.</item>
         /// </list>
         /// </param>
         /// <returns>Ready-to-run <see cref="AzureFunctionsServer"/>.</returns>
@@ -76,7 +76,12 @@ namespace AspNetCoreInAzureFunctions
                     .ConfigureLogging((hostingContext, logging) =>
                     {
                         logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
-                        logging.AddConsole();
+                        logging.AddAzureFunction();
+                    })
+                    .ConfigureServices(services =>
+                    {
+                        // Required by Azure Function logger.
+                        services.AddHttpContextAccessor();
                     });
             }
 
@@ -97,8 +102,12 @@ namespace AspNetCoreInAzureFunctions
         /// </summary>
         /// <param name="request">The incoming <see cref="HttpRequest"/>.</param>
         /// <param name="executionContext">The Azure Function <see cref="Microsoft.Azure.WebJobs.ExecutionContext"/></param>
+        /// <param name="logger">The Azure Function <see cref="ILogger"/></param>
         /// <returns>The final <see cref="HttpResponseMessage"/>.</returns>
-        public async Task<HttpResponseMessage> ProcessRequestAsync(HttpRequest request, Microsoft.Azure.WebJobs.ExecutionContext executionContext = null)
+        public async Task<HttpResponseMessage> ProcessRequestAsync(
+            HttpRequest request,
+            Microsoft.Azure.WebJobs.ExecutionContext executionContext = null,
+            ILogger logger = null)
         {
             if (request == null)
             {
@@ -110,7 +119,7 @@ namespace AspNetCoreInAzureFunctions
                 throw new Exception($"The {nameof(Application)} hasn't been initialized. Make sure that the host has started prior to calling {nameof(ProcessRequestAsync)}");
             }
 
-            var features = new AzureFunctionsFeatures(request, executionContext);
+            var features = new AzureFunctionsFeatures(request, executionContext: executionContext, logger: logger);
             var context = Application.CreateContext(features);
 
             try

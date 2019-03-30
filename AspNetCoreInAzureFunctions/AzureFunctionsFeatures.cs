@@ -10,6 +10,7 @@ using AspNetCoreInAzureFunctions.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 
 namespace AspNetCoreInAzureFunctions
 {
@@ -19,10 +20,11 @@ namespace AspNetCoreInAzureFunctions
     [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "HttpResponseMessage will be disposed by the functions runtime.")]
     [SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Collection suffix conflict with standard ASP.Net core naming conventions.")]
     public sealed class AzureFunctionsFeatures
-        : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpResponseMessageFeature, IAzureFunctionExecutionContext
+        : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpResponseMessageFeature, IAzureFunctionExecutionContextFeature, IAzureFunctionLoggerFeature
     {
         private readonly IDictionary<Type, object> _features = new Dictionary<Type, object>();
         private readonly HttpRequest _request;
+        private readonly ILogger _logger;
         private readonly ExecutionContext _executionContext;
         private readonly HttpResponseMessage _responseMessage;
 
@@ -31,7 +33,8 @@ namespace AspNetCoreInAzureFunctions
         /// </summary>
         /// <param name="request">The incoming <see cref="HttpRequest"/></param>
         /// <param name="executionContext">The Azure Function <see cref="ExecutionContext"/></param>
-        public AzureFunctionsFeatures(HttpRequest request, ExecutionContext executionContext = null)
+        /// <param name="logger">The Azure Function <see cref="ILogger"/></param>
+        public AzureFunctionsFeatures(HttpRequest request, ExecutionContext executionContext = null, ILogger logger = null)
         {
             _request = request ?? throw new ArgumentNullException(nameof(request));
             _responseMessage = new HttpResponseMessage();
@@ -39,10 +42,17 @@ namespace AspNetCoreInAzureFunctions
             _features[typeof(IHttpRequestFeature)] = this;
             _features[typeof(IHttpResponseFeature)] = this;
             _features[typeof(IHttpResponseMessageFeature)] = this;
+
             if (executionContext != null)
             {
                 _executionContext = executionContext;
-                _features[typeof(IAzureFunctionExecutionContext)] = this;
+                _features[typeof(IAzureFunctionExecutionContextFeature)] = this;
+            }
+
+            if (logger != null)
+            {
+                _logger = logger;
+                _features[typeof(IAzureFunctionLoggerFeature)] = this;
             }
         }
 
@@ -106,7 +116,10 @@ namespace AspNetCoreInAzureFunctions
         public bool HasStarted { get; private set; }
 
         /// <inheritdoc />
-        ExecutionContext IAzureFunctionExecutionContext.ExecutionContext { get => _executionContext; }
+        ExecutionContext IAzureFunctionExecutionContextFeature.ExecutionContext => _executionContext;
+
+        /// <inheritdoc />
+        ILogger IAzureFunctionLoggerFeature.Logger => _logger;
 
         /// <inheritdoc />
         object IFeatureCollection.this[Type key]

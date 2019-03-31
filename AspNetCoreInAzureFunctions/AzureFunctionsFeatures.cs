@@ -3,10 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AspNetCoreInAzureFunctions.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +21,7 @@ namespace AspNetCoreInAzureFunctions
     [SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Collection suffix conflict with standard ASP.Net core naming conventions.")]
     public sealed class AzureFunctionsFeatures
         : FeatureCollection,
-        IHttpRequestFeature, IHttpResponseFeature, IHttpRequestIdentifierFeature,
+        IHttpRequestFeature, IHttpResponseFeature, IHttpRequestIdentifierFeature, IHttpAuthenticationFeature,
         IHttpResponseMessageFeature, IAzureFunctionExecutionContextFeature, IAzureFunctionLoggerFeature
     {
         private readonly HttpRequest _request;
@@ -33,7 +35,12 @@ namespace AspNetCoreInAzureFunctions
         /// <param name="request">The incoming <see cref="HttpRequest"/></param>
         /// <param name="executionContext">The Azure Function <see cref="ExecutionContext"/></param>
         /// <param name="logger">The Azure Function <see cref="ILogger"/></param>
-        public AzureFunctionsFeatures(HttpRequest request, ExecutionContext executionContext = null, ILogger logger = null)
+        /// <param name="claimsPrincipal">The Azure Function <see cref="ClaimsPrincipal"/></param>
+        public AzureFunctionsFeatures(
+            HttpRequest request,
+            ExecutionContext executionContext = null,
+            ILogger logger = null,
+            ClaimsPrincipal claimsPrincipal = null)
         {
             _request = request ?? throw new ArgumentNullException(nameof(request));
             _responseMessage = new HttpResponseMessage();
@@ -53,6 +60,12 @@ namespace AspNetCoreInAzureFunctions
             {
                 _logger = logger;
                 Set<IAzureFunctionLoggerFeature>(this);
+            }
+
+            if (claimsPrincipal != null)
+            {
+                Set<IHttpAuthenticationFeature>(this);
+                ((IHttpAuthenticationFeature)this).User = claimsPrincipal;
             }
         }
 
@@ -117,6 +130,12 @@ namespace AspNetCoreInAzureFunctions
 
         /// <inheritdoc />
         string IHttpRequestIdentifierFeature.TraceIdentifier { get; set; }
+
+        /// <inheritdoc />
+        ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
+
+        /// <inheritdoc />
+        IAuthenticationHandler IHttpAuthenticationFeature.Handler { get; set; }
 
         /// <inheritdoc />
         void IHttpResponseFeature.OnStarting(Func<object, Task> callback, object state)

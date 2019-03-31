@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using AspNetCoreInAzureFunctions.Features;
@@ -103,11 +104,13 @@ namespace AspNetCoreInAzureFunctions
         /// <param name="request">The incoming <see cref="HttpRequest"/>.</param>
         /// <param name="executionContext">The Azure Function <see cref="Microsoft.Azure.WebJobs.ExecutionContext"/></param>
         /// <param name="logger">The Azure Function <see cref="ILogger"/></param>
+        /// <param name="claimsPrincipal">The Azure Function <see cref="ClaimsPrincipal"/></param>
         /// <returns>The final <see cref="HttpResponseMessage"/>.</returns>
         public async Task<HttpResponseMessage> ProcessRequestAsync(
             HttpRequest request,
             Microsoft.Azure.WebJobs.ExecutionContext executionContext = null,
-            ILogger logger = null)
+            ILogger logger = null,
+            ClaimsPrincipal claimsPrincipal = null)
         {
             if (request == null)
             {
@@ -119,7 +122,7 @@ namespace AspNetCoreInAzureFunctions
                 throw new Exception($"The {nameof(Application)} hasn't been initialized. Make sure that the host has started prior to calling {nameof(ProcessRequestAsync)}");
             }
 
-            var features = new AzureFunctionsFeatures(request, executionContext: executionContext, logger: logger);
+            var features = new AzureFunctionsFeatures(request, executionContext: executionContext, logger: logger, claimsPrincipal: claimsPrincipal);
             var context = Application.CreateContext(features);
 
             try

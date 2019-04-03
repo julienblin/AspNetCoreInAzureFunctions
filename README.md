@@ -35,15 +35,15 @@ AspNetCoreInAzureFunctions allows you to create an Azure Function V2 app/HTTP en
       
       public class Startup
       {
-      	public void ConfigureServices(IServiceCollection services)
-      	{
-      		services.AddMvc();
-      	}
+        public void ConfigureServices(IServiceCollection services)
+        {
+          services.AddMvc();
+        }
       
-      	public void Configure(IApplicationBuilder app)
-      	{
-      		app.UseMvc();
-      	}
+        public void Configure(IApplicationBuilder app)
+        {
+          app.UseMvc();
+        }
       }
       ```
    2. Add a new controller with the following content:
@@ -53,11 +53,11 @@ AspNetCoreInAzureFunctions allows you to create an Azure Function V2 app/HTTP en
       [ApiController]
       public class SampleController : ControllerBase
       {
-      	[HttpGet("hello")]
-      	public IActionResult Hello([FromQuery] string name)
-      	{
-      		return Ok($"Hello, {name ?? "world"}");
-      	}
+        [HttpGet("hello")]
+        public IActionResult Hello([FromQuery] string name)
+        {
+          return Ok($"Hello, {name ?? "world"}");
+        }
       }
       ```
 
@@ -73,14 +73,14 @@ AspNetCoreInAzureFunctions allows you to create an Azure Function V2 app/HTTP en
    public static class Function1
    {
        // Initialize ASP.Net Core Server using the Startup class.
-   	private static AzureFunctionsServer Server { get; } = AzureFunctionsServer.UseStartup<Startup>();
+     private static AzureFunctionsServer Server { get; } = AzureFunctionsServer.UseStartup<Startup>();
    
-   	[FunctionName("Function1")]
-       public static Task<HttpResponseMessage> Run(
-   		[HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req)
-   	{
-           return Server.ProcessRequestAsync(req);
-   	}
+     [FunctionName("Function1")]
+     public static Task<HttpResponseMessage> Run(
+       [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req)
+     {
+       return Server.ProcessRequestAsync(req);
+     }
    }
    ```
 
@@ -111,18 +111,21 @@ At this point, any standard feature of ASP.NET Core should work.
    ```c#
    [FunctionName("Function1")]
    public static Task<HttpResponseMessage> Run(
-   [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
-   ExecutionContext executionContext)
+     [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
+     ExecutionContext executionContext)
    {
-   return Server.ProcessRequestAsync(req, executionContext: executionContext);
+     return Server.ProcessRequestAsync(req, executionContext: executionContext);
    }
    ```
 
 2. Get the `IAzureFunctionExecutionContextFeature` feature from the HttpContext in your controller code:
 
    ```c#
-   var azureFunctionExecutionContextFeature = HttpContext.Features.Get<IAzureFunctionExecutionContextFeature>();
-   			var azureFunctionExecutionContext = azureFunctionExecutionContextFeature.ExecutionContext;
+   var azureFunctionExecutionContextFeature =
+     HttpContext.Features.Get<IAzureFunctionExecutionContextFeature>();
+   
+   var azureFunctionExecutionContext =
+     azureFunctionExecutionContextFeature.ExecutionContext;
    ```
 
 *Additionally, the ASP.NET Core `HttpContext.TraceIdentifier` will be set to the Azure Function `ExecutionContext.InvocationId`.*
@@ -134,10 +137,10 @@ Update the Azure Function signature to pass the  Azure Function `ILogger`
 ```c#
 [FunctionName("Function1")]
 public static Task<HttpResponseMessage> Run(
-[HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
-ILogger logger)
+  [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
+  ILogger logger)
 {
-return Server.ProcessRequestAsync(req, logger: logger);
+  return Server.ProcessRequestAsync(req, logger: logger);
 }
 ```
 
@@ -162,11 +165,10 @@ Update the Azure Function signature to pass the  Azure Function `ILogger`
 ```c#
 [FunctionName("Function1")]
 public static Task<HttpResponseMessage> Run(
-[HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
-ClaimsPrincipal claimsPrincipal
-ILogger logger)
+  [HttpTrigger(AuthorizationLevel.Anonymous, Route = "/{*proxy}")] HttpRequest req,
+  ClaimsPrincipal claimsPrincipal)
 {
-return Server.ProcessRequestAsync(req, claimsPrincipal: claimsPrincipal);
+  return Server.ProcessRequestAsync(req, claimsPrincipal: claimsPrincipal);
 }
 ```
 
@@ -177,15 +179,17 @@ The `ClaimsPrincipal` is then accessible in the controllers and authentication s
 The following line in your Azure Functions:
 
 ```c#
-private static AzureFunctionsServer Server { get; } = AzureFunctionsServer.UseStartup<Startup>();
+private static AzureFunctionsServer Server { get; }
+  = AzureFunctionsServer.UseStartup<Startup>();
 ```
 
 is functionally equivalent to the standard ASP.NET Core line in `Program.cs`:
 
 ```c#
-WebHost.CreateDefaultBuilder()
-       .UseStartup<Startup>()
-       .Build();
+WebHost
+  .CreateDefaultBuilder()
+  .UseStartup<Startup>()
+  .Build();
 ```
 
 It initialize and starts a `IWebHost` instance with the following configuration:
@@ -198,15 +202,16 @@ It initialize and starts a `IWebHost` instance with the following configuration:
 To customize, use the overload that gives you an instance of `IWebHostBuilder`:
 
 ```c#
-private static AzureFunctionsServer Server { get; } = AzureFunctionsServer.UseStartup<Startup>(builder =>
-	{
-		builder
-			.UseContentRoot(Directory.GetCurrentDirectory())
-			.ConfigureLogging((hostingContext, logging) =>
-			{
-				logging.AddConsole();
-			});
-	});
+private static AzureFunctionsServer Server { get; } =
+  AzureFunctionsServer.UseStartup<Startup>(builder =>
+  {
+    builder
+      .UseContentRoot(Directory.GetCurrentDirectory())
+      .ConfigureLogging((hostingContext, logging) =>
+      {
+        logging.AddConsole();
+      });
+  });
 ```
 
 ## How does it work?
